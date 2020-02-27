@@ -28,11 +28,13 @@ def f_leer_archivo(param_archivo):
     df_data = pd.read_excel('archivos/' + param_archivo, sheet_name='Hoja1')
 
     # Cnvertir en minusculas el nombre de las columnas
-    df_data.columns = [list(df_data.columns)[0].lower()
+    df_data.columns = [list(df_data.columns)[i].lower()
                        for i in range(0, len(df_data.columns))]
     # Asegurar que ciertas son del tipo numerico
     numcols = ['s/l', 't/p', 'commission', 'openprice', 'closeprice', 'profit', 'size', 'swap',
-               'taxes', 'other']
-    df_data(numcols) = df_data[numcols].apply(pd.to_numeric)
+              'taxes', 'order']
 
+    df_data[numcols] = df_data[numcols].apply(pd.to_numeric)
+
+    print(df_data)
     return df_data

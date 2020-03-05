@@ -125,6 +125,19 @@ def f_columnas_pips(param_data):
         elif param_data['type'] == 'sell':
             param_data['pip_size'] = param_data['openprice'] - param_data['closeprice'] * f_pip_size(param_data(i, 4))
 
+def f_estadisticas_ba(param_data):
+    """
+
+    Parameters
+    ----------
+    param_data
+
+    Returns
+    -------
+
+    """
+
+
 
 
 

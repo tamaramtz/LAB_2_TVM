@@ -5,6 +5,7 @@
 # -- repositorio: https://github.com/tamaramtz/LAB_2_TVM.git
 # -- ------------------------------------------------------------------------------------ -- #
 import pandas as pd
+import numpy as np
 
 # -- -------------------------------------------------------------- FUNCION: Leer archivo -- #
 # -- ------------------------------------------------------------------------------------ -- #
@@ -118,12 +119,14 @@ def f_columnas_pips(param_data):
 
     """
     param_data['pip_size'] = 0
-    for i in range (0,len(param_data['type']))
+    for i in range(0, len(param_data['type'])):
         #(closeprice - openprice)*multiplicador
-        if param_data['type'] == 'buy':
-            param_data['pip_size'] = param_data['closeprice']-param_data['openprice']*f_pip_size(param_data(i,4))
-        elif param_data['type'] == 'sell':
-            param_data['pip_size'] = param_data['openprice'] - param_data['closeprice'] * f_pip_size(param_data(i, 4))
+        #param_data['pip_size'] = np.zeros(len(param_data['type']))
+        param_data['pip_size'] = param_data[param_data['type'] == 'sell']['openprice'] - \
+                                 param_data[param_data['type'] == 'sell']['closeprice']
+        param_data['pip_size'][param_data['type'] == 'buy'] = (param_data[param_data['type'] == 'buy']['closeprice'] - \
+                               param_data[param_data['type'] == 'buy']['openprice'])
+
 
 def f_estadisticas_ba(param_data):
     """
@@ -134,8 +137,13 @@ def f_estadisticas_ba(param_data):
 
     Returns
     -------
-
+    dataFrame
     """
+    df_ba = pd.DataFrame(index=['Ops totales','Ganadoras','Ganadoras_c','Ganadoras_v','Perdedoras','Perdedoras_c',
+                                'Perdedoras_v','Media (Profit)','Media (Pips)','r_efectividad','r_proporcion',
+                                'r_efectividad_c','r_efectividad_v'],columns=['valor', 'descripción'])
+    df_ba.index.name = "medida"
+    df_ba.loc['Ops totales',['valor','descripcion']] = len(param_data['order']),'descrip_operaciones'
 
 
 

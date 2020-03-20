@@ -149,12 +149,37 @@ def f_estadisticas_ba(param_data):
     df_ba.loc['Ops totales', ['valor', 'descripcion']] = [len(param_data['order']),'Operaciones totales']
     df_ba.loc['Ganadoras', ['valor', 'descripcion']] = [len(param_data[param_data['pips_size']>=0]),
                                                           'Operaciones ganadoras']
-    df_ba.loc['Ganadoras_c', ['valor', 'descripcion']] = [len(datos[(datos['type'] =='buy') &
-                                                                    (datos['pips_acm'] >= 0)]),
+    df_ba.loc['Ganadoras_c', ['valor', 'descripcion']] = [len(param_data[(param_data['type'] =='buy') &
+                                                                    (param_data['pips_acm'] >= 0)]),
                                                           'Operaciones ganadoras de compra']
-    df_ba.loc['Ganadoras_v', ['valor', 'descripcion']] = [len(datos[(datos['type'] == 'sell') &
-                                                                    (datos['pips_acm'] >= 0)]),
+    df_ba.loc['Ganadoras_v', ['valor', 'descripcion']] = [len(param_data[(param_data['type'] == 'sell') &
+                                                                    (param_data['pips_acm'] >= 0)]),
                                                           'Operaciones ganadoras de venta']
+    df_ba.loc['Perdedoras', ['valor', 'descripcion']] = [len(param_data[param_data['pips_size'] <= 0]),
+                                                        'Operaciones perdedoras']
+    df_ba.loc['Perdedoras_c', ['valor', 'descripcion']] = [len(param_data[(param_data['type'] == 'buy') &
+                                                                    (param_data['pips_acm'] <= 0)]),
+                                                          'Operaciones perdedoras de compra']
+    df_ba.loc['Perdedoras_v', ['valor', 'descripcion']] = [len(param_data[(param_data['type'] == 'sell') &
+                                                                    (param_data['pips_acm'] <= 0)]),
+                                                          'Operaciones perdedoras de venta']
+    df_ba.loc['Media (Profit)', ['valor', 'descripcion']] = [param_data['profit'].median(),
+                                                             'Mediana de profit de operaciones']
+    df_ba.loc['Media (Pips)', ['valor', 'descripcion']] = [param_data['pip_size'].median(),
+                                                             'Mediana de pips de operaciones']
+    df_ba.loc['r_efectividad',['valor', 'descripcion']] = [df_ba['Ganadoras']/df_ba['Ops totales'],
+                                                           'Ganadoras Totales/Operaciones Totales']
+    df_ba.loc['r_proporcion', ['valor', 'descripcion']] = [df_ba['Perdedoras'] / df_ba['Ganadoras'],
+                                                            'Perdedoras Totales/Ganadoras Totales']
+    df_ba.loc['r_efectividad_c', ['valor', 'descripcion']] = [df_ba['Ganadoras_c'] / df_ba['Ops totales'],
+                                                            'Ganadoras Totales/Operaciones Totales']
+    df_ba.loc['r_efectividad_v', ['valor', 'descripcion']] = [df_ba['Ganadoras_v'] / df_ba['Ops totales'],
+                                                            'Ganadoras Totales/Operaciones Totales']
+    return df_ba
+
+
+
+
 
 
 

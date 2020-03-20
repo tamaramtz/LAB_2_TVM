@@ -126,6 +126,9 @@ def f_columnas_pips(param_data):
                                  param_data[param_data['type'] == 'sell']['closeprice']
         param_data['pip_size'][param_data['type'] == 'buy'] = (param_data[param_data['type'] == 'buy']['closeprice'] - \
                                param_data[param_data['type'] == 'buy']['openprice'])
+        param_data['profit_acm'] = param_data['profit'].cumsum()
+
+    return param_data
 
 
 def f_estadisticas_ba(param_data):
@@ -139,11 +142,22 @@ def f_estadisticas_ba(param_data):
     -------
     dataFrame
     """
-    df_ba = pd.DataFrame(index=['Ops totales','Ganadoras','Ganadoras_c','Ganadoras_v','Perdedoras','Perdedoras_c',
-                                'Perdedoras_v','Media (Profit)','Media (Pips)','r_efectividad','r_proporcion',
-                                'r_efectividad_c','r_efectividad_v'],columns=['valor', 'descripción'])
+    df_ba = pd.DataFrame(index=['Ops totales', 'Ganadoras', 'Ganadoras_c', 'Ganadoras_v', 'Perdedoras', 'Perdedoras_c',
+                                'Perdedoras_v', 'Media (Profit)', 'Media (Pips)', 'r_efectividad', 'r_proporcion',
+                                'r_efectividad_c', 'r_efectividad_v'], columns=['valor', 'descripción'])
     df_ba.index.name = "medida"
-    df_ba.loc['Ops totales',['valor','descripcion']] = len(param_data['order']),'descrip_operaciones'
+    df_ba.loc['Ops totales', ['valor', 'descripcion']] = [len(param_data['order']),'Operaciones totales']
+    df_ba.loc['Ganadoras', ['valor', 'descripcion']] = [len(param_data[param_data['pips_size']>=0]),
+                                                          'Operaciones ganadoras']
+    df_ba.loc['Ganadoras_c', ['valor', 'descripcion']] = [len(datos[(datos['type'] =='buy') &
+                                                                    (datos['pips_acm'] >= 0)]),
+                                                          'Operaciones ganadoras de compra']
+    df_ba.loc['Ganadoras_v', ['valor', 'descripcion']] = [len(datos[(datos['type'] == 'sell') &
+                                                                    (datos['pips_acm'] >= 0)]),
+                                                          'Operaciones ganadoras de venta']
+
+
+
 
 
 

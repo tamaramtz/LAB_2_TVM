@@ -117,20 +117,29 @@ def f_columnas_pips(param_data):
     -------
     param_data:
 
+    debugging
+    ---------
+    param_data = datos
     """
     param_data['pip_size'] = 0
     for i in range(0, len(param_data['type'])):
+        print(i)
+        print(param_data.loc[i, 'symbol'])
         #(closeprice - openprice)*multiplicador
         #param_data['pip_size'] = np.zeros(len(param_data['type']))
-        param_data['pip_size'] = param_data[param_data['type'] == 'sell']['openprice'] - \
-                                 param_data[param_data['type'] == 'sell']['closeprice']
+        param_data['pip_size'] = (param_data[param_data['type'] == 'sell']['openprice'] - \
+                                 param_data[param_data['type'] == 'sell']['closeprice']) * \
+                                 f_pip_size(param_data.loc[i, 'symbol'])
         param_data['pip_size'][param_data['type'] == 'buy'] = (param_data[param_data['type'] == 'buy']['closeprice'] - \
-                               param_data[param_data['type'] == 'buy']['openprice'])
+                               param_data[param_data['type'] == 'buy']['openprice']) * \
+                                                              f_pip_size(param_data.loc[i, 'symbol'])
         param_data['profit_acm'] = param_data['profit'].cumsum()
 
     return param_data
 
-
+# -- -------------------------------------------------------------- FUNCION: Diccionario de estadisticas -- #
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Dos salidas, dos tablas
 def f_estadisticas_ba(param_data):
     """
 
@@ -181,32 +190,76 @@ def f_estadisticas_ba(param_data):
                                                                              (param_data['pip_size'] >= 0)]) /
                                                               len(param_data[param_data['type'] == 'sell']),
                                                               'Ganadoras Totales/Operaciones Totales']
-    return df_ba
 
-def df_1_ranking(param_data):
-    """
-
-    Parameters
-    ----------
-    param_data
-
-    Returns
-    -------
-
-    """
     symbols = np.unique(param_data.symbol)
 
     df_r = pd.DataFrame(columns=['rank'])
     df_r.index.name = "symbol"
 
-    rank = [len(datos[datos.profit > 0][datos.symbol == i]) / len(datos[datos.symbol == i])
+    rank = [len(param_data[param_data.profit > 0][param_data.symbol == i]) / len(param_data[param_data.symbol == i])
             for i in symbols]
     df_r['rank'] = rank
     df_r['symbol'] = symbols
     df_r.sort_values(by='rank', ascending=False)
-    return df_r
+    return {'df_1_tabla': df_ba, 'df_2_ranking': df_r}
+
+# -- -------------------------------------------------------------- FUNCION: Capital acumulado -- #
+# -- ------------------------------------------------------------------------------------ -- #
+# -- muestra el capital acumulado en cada dia
+
+def f_capital_acm(param_data):
+    """
+
+    Parameters
+    ----------
+    param_data:  dataframe del historico de operaciones
+
+    Returns
+    -------
+    param_data: con clumna del profit acumulado teniendo en cuenta los 5000 con los que se inicio la cuenta
+    """
+    param_data['capital_acm'] = 0
+    param_data['capital_acm'] = param_data['profit_acm'] + 5000
+
+    return param_data
+
+# -- -------------------------------------------------------------- FUNCION: Tabla de profit diario -- #
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Una tambla con el dia y el profit diario y el acumulado
+
+def f_profit_diario(param_data):
+    """
+
+    Parameters
+    ----------
+    param_data:  dataframe del historico de operaciones
+
+    Returns
+    -------
+    tabla con profit diario y profit diario acumulado
+    """
+    pass
+# -- ---------------------------------------------------- FUNCION: Estadisticas financieras -- #
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Una tambla con el dia y el profit diario y el acumulado
 
 
+def f_estadisticas_mad(param_data, rf=0.08):
+    """
+
+    Parameters
+    ----------
+    param_data: dataframe del historico de operaciones
+    rf: tasa libre de riesgo
+
+    Returns
+    -------
+
+    """
+    df_mad = pd.DataFrame(
+        index=['sharpe', 'sortino_c', 'sortino_v', 'drawdown_capi_c', 'drawdown_capi_u', 'information_r'],
+        columns=['valor', 'descripcion'])
+    df_mad.index.name = "medida"
 
 
 

@@ -78,7 +78,7 @@ def f_pip_size(param_ins):
 # -- ------------------------------------------------------------------------------------ -- #
 # -- calcular la diferencia entre el tiempo open y close
 
-def f_columnas_datos(param_data):
+def f_columnas_tiempos(param_data):
     """
     Parameters
     ----------
@@ -102,6 +102,7 @@ def f_columnas_datos(param_data):
 
     return param_data
 
+
 # -- -------------------------------------- FUNCION: Columnas de transformaciones de pips -- #
 # -- ------------------------------------------------------------------------------------ -- #
 # -- calcular la cantidad de pips resultantes por cada operación
@@ -122,18 +123,24 @@ def f_columnas_pips(param_data):
     param_data = datos
     """
     param_data['pip_size'] = 0
-    for i in range(0, len(param_data['type'])):
-        print(i)
-        print(param_data.loc[i, 'symbol'])
+    #for i in range(0, len(param_data['type'])):
+        #print(i)
+        #print(param_data.loc[i, 'symbol'])
         #(closeprice - openprice)*multiplicador
         #param_data['pip_size'] = np.zeros(len(param_data['type']))
-        param_data['pip_size'] = (param_data[param_data['type'] == 'sell']['openprice'] - \
-                                 param_data[param_data['type'] == 'sell']['closeprice']) * \
-                                 f_pip_size(param_data.loc[i, 'symbol'])
-        param_data['pip_size'][param_data['type'] == 'buy'] = (param_data[param_data['type'] == 'buy']['closeprice'] - \
-                               param_data[param_data['type'] == 'buy']['openprice']) * \
-                                                              f_pip_size(param_data.loc[i, 'symbol'])
-        param_data['profit_acm'] = param_data['profit'].cumsum()
+        #param_data['pip_size'] = (param_data[param_data['type'] == 'sell']['openprice'] - \
+                                 #param_data[param_data['type'] == 'sell']['closeprice']) * \
+                                 #f_pip_size(param_data.loc[i, 'symbol'])
+        #param_data['pip_size'][param_data['type'] == 'buy'] = (param_data[param_data['type'] == 'buy']['closeprice'] - \
+                               #param_data[param_data['type'] == 'buy']['openprice']) * \
+                                                              #f_pip_size(param_data.loc[i, 'symbol'])
+
+    param_data['pips'] = [(param_data.loc[i, 'closeprice'] - param_data.loc[i, 'openprice']) *
+                             f_pip_size(param_data.loc[i, 'symbol']) if param_data.loc[i, 'type'] == 'buy'
+                          else (param_data.loc[i, 'openprice'] - param_data.loc[i, 'closeprice']) *
+                               f_pip_size(param_data.loc[i, 'symbol']) for i in param_data.index]
+    param_data['pips_acum'] = param_data['pips'].cumsum()
+    param_data['profit_acm'] = param_data['profit'].cumsum()
 
     return param_data
 
@@ -156,39 +163,39 @@ def f_estadisticas_ba(param_data):
                                 'r_efectividad_c', 'r_efectividad_v'], columns=['valor', 'descripcion'])
     df_ba.index.name = "medida"
     df_ba.loc['Ops totales', ['valor', 'descripcion']] = [len(param_data['order']), 'Operaciones totales']
-    df_ba.loc['Ganadoras', ['valor', 'descripcion']] = [len(param_data[param_data['pip_size'] >= 0]),
+    df_ba.loc['Ganadoras', ['valor', 'descripcion']] = [len(param_data[param_data['pips'] >= 0]),
                                                         'Operaciones ganadoras']
     df_ba.loc['Ganadoras_c', ['valor', 'descripcion']] = [len(param_data[(param_data['type'] == 'buy') &
-                                                                         (param_data['pip_size'] >= 0)]),
+                                                                         (param_data['pips'] >= 0)]),
                                                           'Operaciones ganadoras de compra']
     df_ba.loc['Ganadoras_v', ['valor', 'descripcion']] = [len(param_data[(param_data['type'] == 'sell') &
-                                                                         (param_data['pip_size'] >= 0)]),
+                                                                         (param_data['pips'] >= 0)]),
                                                           'Operaciones ganadoras de venta']
-    df_ba.loc['Perdedoras', ['valor', 'descripcion']] = [len(param_data[param_data['pip_size'] < 0]),
+    df_ba.loc['Perdedoras', ['valor', 'descripcion']] = [len(param_data[param_data['pips'] < 0]),
                                                          'Operaciones perdedoras']
     df_ba.loc['Perdedoras_c', ['valor', 'descripcion']] = [len(param_data[(param_data['type'] == 'buy') &
-                                                                          (param_data['pip_size'] <= 0)]),
+                                                                          (param_data['pips'] <= 0)]),
                                                            'Operaciones perdedoras de compra']
     df_ba.loc['Perdedoras_v', ['valor', 'descripcion']] = [len(param_data[(param_data['type'] == 'sell') &
-                                                                          (param_data['pip_size'] <= 0)]),
+                                                                          (param_data['pips'] <= 0)]),
                                                            'Operaciones perdedoras de venta']
     df_ba.loc['Media (Profit)', ['valor', 'descripcion']] = [param_data['profit'].median(),
                                                              'Mediana de profit de operaciones']
-    df_ba.loc['Media (Pips)', ['valor', 'descripcion']] = [param_data['pip_size'].median(),
+    df_ba.loc['Media (Pips)', ['valor', 'descripcion']] = [np.trunc(param_data['pips'].median()),
                                                            'Mediana de pips de operaciones']
-    df_ba.loc['r_efectividad', ['valor', 'descripcion']] = [len(param_data[param_data['pip_size'] >= 0]) /
-                                                            len(param_data['order']),
+    df_ba.loc['r_efectividad', ['valor', 'descripcion']] = [np.round(len(param_data[param_data['pips'] >= 0]) /
+                                                            len(param_data['order']), 2),
                                                             'Ganadoras Totales/Operaciones Totales']
-    df_ba.loc['r_proporcion', ['valor', 'descripcion']] = [len(param_data[param_data['pip_size'] >= 0]) /
-                                                           len(param_data[param_data['pip_size'] < 0]),
+    df_ba.loc['r_proporcion', ['valor', 'descripcion']] = [np.round(len(param_data[param_data['pips'] >= 0]) /
+                                                           len(param_data[param_data['pips'] < 0]), 2),
                                                            'Perdedoras Totales/Ganadoras Totales']
-    df_ba.loc['r_efectividad_c', ['valor', 'descripcion']] = [len(param_data[(param_data['type'] == 'buy') &
-                                                                             (param_data['pip_size'] >= 0)]) /
-                                                              len(param_data[param_data['type'] == 'buy']),
+    df_ba.loc['r_efectividad_c', ['valor', 'descripcion']] = [np.round(len(param_data[(param_data['type'] == 'buy') &
+                                                                             (param_data['pips'] >= 0)]) /
+                                                              len(param_data['order']), 2),
                                                               'Ganadoras Totales/Operaciones Totales']
-    df_ba.loc['r_efectividad_v', ['valor', 'descripcion']] = [len(param_data[(param_data['type'] == 'sell') &
-                                                                             (param_data['pip_size'] >= 0)]) /
-                                                              len(param_data[param_data['type'] == 'sell']),
+    df_ba.loc['r_efectividad_v', ['valor', 'descripcion']] = [np.round(len(param_data[(param_data['type'] == 'sell') &
+                                                                             (param_data['pips'] >= 0)]) /
+                                                              len(param_data['order']), 2),
                                                               'Ganadoras Totales/Operaciones Totales']
 
     symbols = np.unique(param_data.symbol)
@@ -244,7 +251,7 @@ def f_profit_diario(param_data):
 # -- Una tambla con el dia y el profit diario y el acumulado
 
 
-def f_estadisticas_mad(param_data, rf=0.08):
+def f_estadisticas_mad(param_data):
     """
 
     Parameters
@@ -254,12 +261,31 @@ def f_estadisticas_mad(param_data, rf=0.08):
 
     Returns
     -------
+    df_mad: dataframe Medidas de Atribución al Desempeño
 
     """
+    # Rendimientos logaritmicos
+    rendto = np.log(param_data.capital_acm/param_data.capital_acm.shift(1)).iloc[1:]
+    # Promedio de los rendimientos logaritmicos semanales
+    rend_log = np.mean(rendto)*52
+    # Desviación estándar de los rendimientos
+    desvest = rendto.std()*np.sqrt(52)
+    rf = 0.08
+
     df_mad = pd.DataFrame(
         index=['sharpe', 'sortino_c', 'sortino_v', 'drawdown_capi_c', 'drawdown_capi_u', 'information_r'],
         columns=['valor', 'descripcion'])
     df_mad.index.name = "medida"
+
+    df_mad.loc['sharpe', ['valor', 'descripcion']] = [(rend_log-rf)/desvest, 'Sharpe Ratio']
+    df_mad.loc['sortino_c', ['valor', 'descripcion']] = [(rend_log - rf) / \
+                                                        rendto[rendto >= 0].std() * np.sqrt(52),
+                                                         'Sortino Ratio para Posiciones  de Compra']
+    df_mad.loc['sortino_v', ['valor', 'descripcion']] = [(rend_log - rf) / \
+                                                        rendto[rendto < 0].std() * np.sqrt(52),
+                                                         'Sortino Ratio para Posiciones  de Venta']
+    return(df_mad)
+
 
 
 

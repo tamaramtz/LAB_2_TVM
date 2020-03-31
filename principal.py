@@ -8,8 +8,7 @@
 import funciones as fn
 
 datos = fn.f_leer_archivo(param_archivo='archivo_tradeview_1.xlsx')
-fn.f_pip_size(param_ins='usdjpy')
 datos = fn.f_columnas_datos(param_data=datos)
 datos_col = fn.f_columnas_pips(param_data=datos)
-estadisticas = fn.f_estadisticas_ba(datos)
-desempenio = fn.f_estadisticas_mad(datos)
+dt_stats = fn.f_estadisticas_ba(datos)
+df_mad = fn.f_estadisticas_mad(datos)

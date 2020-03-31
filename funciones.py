@@ -6,6 +6,8 @@
 # -- ------------------------------------------------------------------------------------ -- #
 import pandas as pd
 import numpy as np
+import datetime as dt
+from datetime import timedelta
 
 # -- -------------------------------------------------------------- FUNCION: Leer archivo -- #
 # -- ------------------------------------------------------------------------------------ -- #
@@ -146,7 +148,7 @@ def f_columnas_pips(param_data):
 
 # -- -------------------------------------------------------------- FUNCION: Diccionario de estadisticas -- #
 # -- ------------------------------------------------------------------------------------ -- #
-# -- Dos salidas, dos tablas
+# -- Un diccionario, dos tablas
 def f_estadisticas_ba(param_data):
     """
 
@@ -158,10 +160,12 @@ def f_estadisticas_ba(param_data):
     -------
     dataFrame
     """
+    # Creamos DataFrame
     df_ba = pd.DataFrame(index=['Ops totales', 'Ganadoras', 'Ganadoras_c', 'Ganadoras_v', 'Perdedoras', 'Perdedoras_c',
                                 'Perdedoras_v', 'Media (Profit)', 'Media (Pips)', 'r_efectividad', 'r_proporcion',
                                 'r_efectividad_c', 'r_efectividad_v'], columns=['valor', 'descripcion'])
     df_ba.index.name = "medida"
+    # Se llena el DataFrame
     df_ba.loc['Ops totales', ['valor', 'descripcion']] = [len(param_data['order']), 'Operaciones totales']
     df_ba.loc['Ganadoras', ['valor', 'descripcion']] = [len(param_data[param_data['pips'] >= 0]),
                                                         'Operaciones ganadoras']
@@ -198,21 +202,27 @@ def f_estadisticas_ba(param_data):
                                                               len(param_data['order']), 2),
                                                               'Ganadoras Totales/Operaciones Totales']
 
+    # Obtenemos los instrumentos en donde se invirtio
     symbols = np.unique(param_data.symbol)
 
+    # Creamos DataFrame
     df_r = pd.DataFrame(columns=['rank'])
     df_r.index.name = "symbol"
 
+    # Se dividen las ganadoras entre la cantidad de operaciones
     rank = [len(param_data[param_data.profit > 0][param_data.symbol == i]) / len(param_data[param_data.symbol == i])
             for i in symbols]
+    # Se mete dentro del DataFrame
     df_r['rank'] = rank
     df_r['symbol'] = symbols
+    # Ordenamos los valores de forma descendente
     df_r.sort_values(by='rank', ascending=False)
+    # Se regresa en forma de diccionario
     return {'df_1_tabla': df_ba, 'df_2_ranking': df_r}
 
 # -- -------------------------------------------------------------- FUNCION: Capital acumulado -- #
 # -- ------------------------------------------------------------------------------------ -- #
-# -- muestra el capital acumulado en cada dia
+# -- Columna con el profit acumulado
 
 def f_capital_acm(param_data):
     """
@@ -225,7 +235,9 @@ def f_capital_acm(param_data):
     -------
     param_data: con clumna del profit acumulado teniendo en cuenta los 5000 con los que se inicio la cuenta
     """
+    # Se crea una coluna llena de ceros
     param_data['capital_acm'] = 0
+    # Se suma al profit acumuludo los 5000 con los que se inició
     param_data['capital_acm'] = param_data['profit_acm'] + 5000
 
     return param_data
@@ -244,11 +256,17 @@ def f_profit_diario(param_data):
     Returns
     -------
     tabla con profit diario y profit diario acumulado
+
     """
-    pass
+    df_pr = pd.DataFrame(columns=['timestamp','profit_d', 'profit_acm_d'])
+
+    df_pr['timestamp'] = pd.date_range(param_data.closetime.min(), param_data.closetime.max(), freq='D').date
+    df_pr['profit_d'] =
+
+    return df_pr
 # -- ---------------------------------------------------- FUNCION: Estadisticas financieras -- #
 # -- ------------------------------------------------------------------------------------ -- #
-# -- Una tambla con el dia y el profit diario y el acumulado
+# -- Una tabla con diferentes métricas de atribución
 
 
 def f_estadisticas_mad(param_data):
@@ -267,10 +285,11 @@ def f_estadisticas_mad(param_data):
     # Rendimientos logaritmicos
     rendto = np.log(param_data.capital_acm/param_data.capital_acm.shift(1)).iloc[1:]
     # Promedio de los rendimientos logaritmicos semanales
-    rend_log = np.mean(rendto)*52
+    rend_log = np.mean(rendto)
     # Desviación estándar de los rendimientos
-    desvest = rendto.std()*np.sqrt(52)
-    rf = 0.08
+    desvest = rendto.std()
+    rf = 0.08/300
+    # mar = .3/300
 
     df_mad = pd.DataFrame(
         index=['sharpe', 'sortino_c', 'sortino_v', 'drawdown_capi_c', 'drawdown_capi_u', 'information_r'],
@@ -279,11 +298,12 @@ def f_estadisticas_mad(param_data):
 
     df_mad.loc['sharpe', ['valor', 'descripcion']] = [(rend_log-rf)/desvest, 'Sharpe Ratio']
     df_mad.loc['sortino_c', ['valor', 'descripcion']] = [(rend_log - rf) / \
-                                                        rendto[rendto >= 0].std() * np.sqrt(52),
+                                                        rendto[rendto >= 0].std() * np.sqrt(300),
                                                          'Sortino Ratio para Posiciones  de Compra']
     df_mad.loc['sortino_v', ['valor', 'descripcion']] = [(rend_log - rf) / \
-                                                        rendto[rendto < 0].std() * np.sqrt(52),
+                                                        rendto[rendto < 0].std() * np.sqrt(300),
                                                          'Sortino Ratio para Posiciones  de Venta']
+
     return(df_mad)
 
 

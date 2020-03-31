@@ -258,10 +258,23 @@ def f_profit_diario(param_data):
     tabla con profit diario y profit diario acumulado
 
     """
-    df_pr = pd.DataFrame(columns=['timestamp','profit_d', 'profit_acm_d'])
+    df_pr = pd.DataFrame(columns=['timestamp', 'profit_d', 'profit_acm_d'])
+    diario = pd.date_range(param_data.closetime.min(), param_data.closetime.max()).date
+    df_pr['timestamp'] = diario
+    df_pr['profit_d'] = 0
+    y = slice(0, 10, 1)
+    df_pr['timestamp'] = [str(i)[y] for i in diario]
 
-    df_pr['timestamp'] = pd.date_range(param_data.closetime.min(), param_data.closetime.max(), freq='D').date
-    df_pr['profit_d'] =
+    param_data['closetime'] = [str(i)[y] for i in param_data.closetime]
+
+    profit = np.round(param_data.groupby('closetime')['profit'].sum(), 2)
+
+    for i in range(len(df_pr['timestamp'])):
+        for j in range(len(profit)):
+            if df_pr['timestamp'][i] == profit.index[j]:
+                df_pr['profit_d'][i] = profit[j]
+
+    df_pr['profit_acm_d'] = df_pr['profit_d'].cumsum()+5000
 
     return df_pr
 # -- ---------------------------------------------------- FUNCION: Estadisticas financieras -- #
@@ -282,8 +295,9 @@ def f_estadisticas_mad(param_data):
     df_mad: dataframe Medidas de Atribución al Desempeño
 
     """
+    df_prof = f_profit_diario(param_data)
     # Rendimientos logaritmicos
-    rendto = np.log(param_data.capital_acm/param_data.capital_acm.shift(1)).iloc[1:]
+    rendto = np.log(df_prof.profit_acm_d/df_prof.profit_acm_d.shift(1)).iloc[1:]
     # Promedio de los rendimientos logaritmicos semanales
     rend_log = np.mean(rendto)
     # Desviación estándar de los rendimientos
@@ -298,10 +312,10 @@ def f_estadisticas_mad(param_data):
 
     df_mad.loc['sharpe', ['valor', 'descripcion']] = [(rend_log-rf)/desvest, 'Sharpe Ratio']
     df_mad.loc['sortino_c', ['valor', 'descripcion']] = [(rend_log - rf) / \
-                                                        rendto[rendto >= 0].std() * np.sqrt(300),
+                                                        rendto[rendto >= 0].std(),
                                                          'Sortino Ratio para Posiciones  de Compra']
     df_mad.loc['sortino_v', ['valor', 'descripcion']] = [(rend_log - rf) / \
-                                                        rendto[rendto < 0].std() * np.sqrt(300),
+                                                        rendto[rendto < 0].std(),
                                                          'Sortino Ratio para Posiciones  de Venta']
 
     return(df_mad)

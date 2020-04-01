@@ -8,6 +8,10 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 from datetime import timedelta
+# Importar el modulo data del paquete pandas_datareader. La comunidad lo importa con el nombre de web
+import pandas as pd
+pd.core.common.is_list_like = pd.api.types.is_list_like
+import pandas_datareader.data as web
 
 # -- -------------------------------------------------------------- FUNCION: Leer archivo -- #
 # -- ------------------------------------------------------------------------------------ -- #
@@ -277,6 +281,20 @@ def f_profit_diario(param_data):
     df_pr['profit_acm_d'] = df_pr['profit_d'].cumsum()+5000
 
     return df_pr
+# -- ---------------------------------------------------- FUNCION: descargar precios de cierre-- #
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Descarga precios  de cierre ajustado de Yahoo
+
+def get_adj_closes(tickers, start_date=None, end_date=None):
+    # Fecha inicio por defecto (start_date='2010-01-01') y fecha fin por defecto (end_date=today)
+    # Descargamos DataFrame con todos los datos
+    closes = web.DataReader(name=tickers, data_source='yahoo', start=start_date, end=end_date)
+    # Solo necesitamos los precios ajustados en el cierre
+    closes = closes['Adj Close']
+    # Se ordenan los índices de manera ascendente
+    closes.sort_index(inplace=True)
+    return closes
+
 # -- ---------------------------------------------------- FUNCION: Estadisticas financieras -- #
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Una tabla con diferentes métricas de atribución
@@ -303,7 +321,7 @@ def f_estadisticas_mad(param_data):
     # Desviación estándar de los rendimientos
     desvest = rendto.std()
     rf = 0.08/300
-    # mar = .3/300
+    mar = .3/300
 
     df_mad = pd.DataFrame(
         index=['sharpe', 'sortino_c', 'sortino_v', 'drawdown_capi_c', 'drawdown_capi_u', 'information_r'],
@@ -311,12 +329,45 @@ def f_estadisticas_mad(param_data):
     df_mad.index.name = "medida"
 
     df_mad.loc['sharpe', ['valor', 'descripcion']] = [(rend_log-rf)/desvest, 'Sharpe Ratio']
-    df_mad.loc['sortino_c', ['valor', 'descripcion']] = [(rend_log - rf) / \
+    df_mad.loc['sortino_c', ['valor', 'descripcion']] = [(rend_log - mar) / \
                                                         rendto[rendto >= 0].std(),
                                                          'Sortino Ratio para Posiciones  de Compra']
-    df_mad.loc['sortino_v', ['valor', 'descripcion']] = [(rend_log - rf) / \
+    df_mad.loc['sortino_v', ['valor', 'descripcion']] = [(rend_log - mar) / \
                                                         rendto[rendto < 0].std(),
                                                          'Sortino Ratio para Posiciones  de Venta']
+    min_val = df_prof.profit_acm_d.min()
+    chch = df_prof.loc[df_prof['profit_acm_d'] == df_prof.profit_acm_d.min()]
+    position = chch.index.tolist()
+    lista = df_prof.loc[0:position[0]]
+    max_lista = lista.max()
+    min_lista = lista.min()
+    total = max_lista['profit_acm_d'] - min_val
+    drawdown = list([min_lista['timestamp'], max_lista['timestamp'], total])
+    df_mad.loc['drawdown_capi_c', ['valor', 'descripcion']] = [[drawdown], 'DrawDown de Capital']
+
+    lista2 = df_prof.loc[position[0]:]
+    max_lista = lista2.max()
+    min_lista = lista2.min()
+    total2 = max_lista['profit_acm_d'] - min_val
+    drawup = list([min_lista['timestamp'], max_lista['timestamp'], total2])
+    df_mad.loc['drawdown_capi_u', ['valor', 'descripcion']] = [[drawup], 'DrawUp de Capital']
+
+    y = slice(0, 10, 1)
+    start = param_data['closetime'].min()[y]
+    end = param_data['closetime'].max()[y]
+    closes = get_adj_closes(tickers='^GSPC', start_date=start, end_date=end)
+    rend_sp = np.log(closes / closes.shift(1)).iloc[1:]
+    prom_rend = rend_sp.mean()
+    rendto_toto = [str(i)[1:] for i in rendto]
+    prec = [float(i) for i in rendto_toto]
+    for i in range(len(prec)):
+        bench = prec[i] - rend_sp
+    benchmark = bench.mean()
+    df_mad.loc['information_r', ['valor', 'descripcion']] = [(rend_log-prom_rend)/benchmark,
+                                                             'Information Ratio']
+
+
+
 
     return(df_mad)
 

@@ -8,10 +8,14 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 from datetime import timedelta
+
 # Importar el modulo data del paquete pandas_datareader. La comunidad lo importa con el nombre de web
-import pandas as pd
 pd.core.common.is_list_like = pd.api.types.is_list_like
 import pandas_datareader.data as web
+import datos
+from oandapyV20 import API
+import oandapyV20.endpoints.instruments as instruments
+
 
 # -- -------------------------------------------------------------- FUNCION: Leer archivo -- #
 # -- ------------------------------------------------------------------------------------ -- #
@@ -40,12 +44,13 @@ def f_leer_archivo(param_archivo):
                        for i in range(0, len(df_data.columns))]
     # Asegurar que ciertas son del tipo numerico
     numcols = ['s/l', 't/p', 'commission', 'openprice', 'closeprice', 'profit', 'size', 'swap',
-              'taxes', 'order']
+               'taxes', 'order']
 
     df_data[numcols] = df_data[numcols].apply(pd.to_numeric)
 
-    #print(df_data)
     return df_data
+
+
 # -- ------------------------------------------------------ FUNCION: Pips por instrumento -- #
 # -- calcular el tamaño de los pips por instrumento
 
@@ -79,6 +84,7 @@ def f_pip_size(param_ins):
                  'xauusd': 10, 'xagusd': 10, 'btcusd': 1}
 
     return pips_inst[inst]
+
 
 # -- ------------------------------------ FUNCION: Columnas de transformaciones de tiempo -- #
 # -- ------------------------------------------------------------------------------------ -- #
@@ -129,26 +135,27 @@ def f_columnas_pips(param_data):
     param_data = datos
     """
     param_data['pip_size'] = 0
-    #for i in range(0, len(param_data['type'])):
-        #print(i)
-        #print(param_data.loc[i, 'symbol'])
-        #(closeprice - openprice)*multiplicador
-        #param_data['pip_size'] = np.zeros(len(param_data['type']))
-        #param_data['pip_size'] = (param_data[param_data['type'] == 'sell']['openprice'] - \
-                                 #param_data[param_data['type'] == 'sell']['closeprice']) * \
-                                 #f_pip_size(param_data.loc[i, 'symbol'])
-        #param_data['pip_size'][param_data['type'] == 'buy'] = (param_data[param_data['type'] == 'buy']['closeprice'] - \
-                               #param_data[param_data['type'] == 'buy']['openprice']) * \
-                                                              #f_pip_size(param_data.loc[i, 'symbol'])
+    # for i in range(0, len(param_data['type'])):
+    # print(i)
+    # print(param_data.loc[i, 'symbol'])
+    # (closeprice - openprice)*multiplicador
+    # param_data['pip_size'] = np.zeros(len(param_data['type']))
+    # param_data['pip_size'] = (param_data[param_data['type'] == 'sell']['openprice'] - \
+    # param_data[param_data['type'] == 'sell']['closeprice']) * \
+    # f_pip_size(param_data.loc[i, 'symbol'])
+    # param_data['pip_size'][param_data['type'] == 'buy'] = (param_data[param_data['type'] == 'buy']['closeprice'] - \
+    # param_data[param_data['type'] == 'buy']['openprice']) * \
+    # f_pip_size(param_data.loc[i, 'symbol'])
 
     param_data['pips'] = [(param_data.loc[i, 'closeprice'] - param_data.loc[i, 'openprice']) *
-                             f_pip_size(param_data.loc[i, 'symbol']) if param_data.loc[i, 'type'] == 'buy'
+                          f_pip_size(param_data.loc[i, 'symbol']) if param_data.loc[i, 'type'] == 'buy'
                           else (param_data.loc[i, 'openprice'] - param_data.loc[i, 'closeprice']) *
                                f_pip_size(param_data.loc[i, 'symbol']) for i in param_data.index]
     param_data['pips_acum'] = param_data['pips'].cumsum()
     param_data['profit_acm'] = param_data['profit'].cumsum()
 
     return param_data
+
 
 # -- -------------------------------------------------------------- FUNCION: Diccionario de estadisticas -- #
 # -- ------------------------------------------------------------------------------------ -- #
@@ -192,18 +199,18 @@ def f_estadisticas_ba(param_data):
     df_ba.loc['Media (Pips)', ['valor', 'descripcion']] = [np.trunc(param_data['pips'].median()),
                                                            'Mediana de pips de operaciones']
     df_ba.loc['r_efectividad', ['valor', 'descripcion']] = [np.round(len(param_data[param_data['pips'] >= 0]) /
-                                                            len(param_data['order']), 2),
+                                                                     len(param_data['order']), 2),
                                                             'Ganadoras Totales/Operaciones Totales']
     df_ba.loc['r_proporcion', ['valor', 'descripcion']] = [np.round(len(param_data[param_data['pips'] >= 0]) /
-                                                           len(param_data[param_data['pips'] < 0]), 2),
+                                                                    len(param_data[param_data['pips'] < 0]), 2),
                                                            'Perdedoras Totales/Ganadoras Totales']
     df_ba.loc['r_efectividad_c', ['valor', 'descripcion']] = [np.round(len(param_data[(param_data['type'] == 'buy') &
-                                                                             (param_data['pips'] >= 0)]) /
-                                                              len(param_data['order']), 2),
+                                                                                      (param_data['pips'] >= 0)]) /
+                                                                       len(param_data['order']), 2),
                                                               'Ganadoras Totales/Operaciones Totales']
     df_ba.loc['r_efectividad_v', ['valor', 'descripcion']] = [np.round(len(param_data[(param_data['type'] == 'sell') &
-                                                                             (param_data['pips'] >= 0)]) /
-                                                              len(param_data['order']), 2),
+                                                                                      (param_data['pips'] >= 0)]) /
+                                                                       len(param_data['order']), 2),
                                                               'Ganadoras Totales/Operaciones Totales']
 
     # Obtenemos los instrumentos en donde se invirtio
@@ -222,7 +229,8 @@ def f_estadisticas_ba(param_data):
     # Ordenamos los valores de forma descendente
     df_r.sort_values(by='rank', ascending=False)
     # Se regresa en forma de diccionario
-    return {'df_1_tabla': df_ba, 'df_2_ranking': df_r}
+    return {'df_1_tabla': df_ba, 'df_2_ranking': df_r.sort_values(by='rank', ascending=False)}
+
 
 # -- -------------------------------------------------------------- FUNCION: Capital acumulado -- #
 # -- ------------------------------------------------------------------------------------ -- #
@@ -245,6 +253,7 @@ def f_capital_acm(param_data):
     param_data['capital_acm'] = param_data['profit_acm'] + 5000
 
     return param_data
+
 
 # -- -------------------------------------------------------------- FUNCION: Tabla de profit diario -- #
 # -- ------------------------------------------------------------------------------------ -- #
@@ -278,9 +287,11 @@ def f_profit_diario(param_data):
             if df_pr['timestamp'][i] == profit.index[j]:
                 df_pr['profit_d'][i] = profit[j]
 
-    df_pr['profit_acm_d'] = df_pr['profit_d'].cumsum()+5000
+    df_pr['profit_acm_d'] = df_pr['profit_d'].cumsum() + 5000
 
     return df_pr
+
+
 # -- ---------------------------------------------------- FUNCION: descargar precios de cierre-- #
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Descarga precios  de cierre ajustado de Yahoo
@@ -294,6 +305,39 @@ def get_adj_closes(tickers, start_date=None, end_date=None):
     # Se ordenan los índices de manera ascendente
     closes.sort_index(inplace=True)
     return closes
+
+
+def f_precios(param_instrument, date):
+    """
+    Parameters
+    ---------
+    :param:
+        instrument: str : instrumento del precio que se requiere
+        date : date : fecha del dia del precio
+    Returns
+    ---------
+    :return:
+        float: precio del intrumento en tal fecha
+    Debuggin
+    ---------
+        instrument = 'EUR_USD'
+        date = pd.to_datetime("2019-07-06 00:00:00")
+    """
+    # Inicializar api de OANDA
+    api = API(environment="practice", access_token=datos.OA_Ak)
+    # Convertir en string la fecha
+    fecha = date.strftime('%Y-%m-%dT%H:%M:%S')
+    # Parametros
+    parameters = {"count": 1, "granularity": 'M1', "price": "M", "dailyAlignment": 16, "from": fecha}
+    # Definir el instrumento del que se quiere el precio
+    r = instruments.InstrumentsCandles(instrument=param_instrument, params=parameters)
+    # Descargarlo de OANDA
+    response = api.request(r)
+    # En fomato candles 'open, low, high, close'
+    prices = response.get("candles")
+    # Regresar el precio de apertura
+    return float(prices[0]['mid']['o'])
+
 
 # -- ---------------------------------------------------- FUNCION: Estadisticas financieras -- #
 # -- ------------------------------------------------------------------------------------ -- #
@@ -315,25 +359,26 @@ def f_estadisticas_mad(param_data):
     """
     df_prof = f_profit_diario(param_data)
     # Rendimientos logaritmicos
-    rendto = np.log(df_prof.profit_acm_d/df_prof.profit_acm_d.shift(1)).iloc[1:]
+    rendto = np.log(df_prof.profit_acm_d / df_prof.profit_acm_d.shift(1)).iloc[1:]
     # Promedio de los rendimientos logaritmicos semanales
     rend_log = np.mean(rendto)
     # Desviación estándar de los rendimientos
     desvest = rendto.std()
-    rf = 0.08/300
-    mar = .3/300
+    rf = 0.08 / 300
+    mar = .3 / 300
+    mar_ca = 5000 * (mar)
 
     df_mad = pd.DataFrame(
         index=['sharpe', 'sortino_c', 'sortino_v', 'drawdown_capi_c', 'drawdown_capi_u', 'information_r'],
         columns=['valor', 'descripcion'])
     df_mad.index.name = "medida"
 
-    df_mad.loc['sharpe', ['valor', 'descripcion']] = [(rend_log-rf)/desvest, 'Sharpe Ratio']
-    df_mad.loc['sortino_c', ['valor', 'descripcion']] = [(rend_log - mar) / \
-                                                        rendto[rendto >= 0].std(),
+    df_mad.loc['sharpe', ['valor', 'descripcion']] = [(rend_log - rf) / desvest, 'Sharpe Ratio']
+    df_mad.loc['sortino_c', ['valor', 'descripcion']] = [(rendto[rendto >= mar_ca].mean() - mar) / \
+                                                         rendto[rendto >= mar_ca].std(),
                                                          'Sortino Ratio para Posiciones  de Compra']
-    df_mad.loc['sortino_v', ['valor', 'descripcion']] = [(rend_log - mar) / \
-                                                        rendto[rendto < 0].std(),
+    df_mad.loc['sortino_v', ['valor', 'descripcion']] = [(rendto[rendto < mar_ca].mean() - mar) / \
+                                                         rendto[rendto < mar_ca].std(),
                                                          'Sortino Ratio para Posiciones  de Venta']
     min_val = df_prof.profit_acm_d.min()
     chch = df_prof.loc[df_prof['profit_acm_d'] == df_prof.profit_acm_d.min()]
@@ -362,23 +407,71 @@ def f_estadisticas_mad(param_data):
     prec = [float(i) for i in rendto_toto]
     for i in range(len(prec)):
         bench = prec[i] - rend_sp
-    benchmark = bench.mean()
-    df_mad.loc['information_r', ['valor', 'descripcion']] = [(rend_log-prom_rend)/benchmark,
+    benchmark = bench.std()
+    df_mad.loc['information_r', ['valor', 'descripcion']] = [(rend_log - prom_rend) / benchmark,
                                                              'Information Ratio']
+    return df_mad
 
 
+# -- ---------------------------------------------------- FUNCION: Disposition Effect -- #
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Función para obtener evidencia sobre la presencia de sesgos cognitivos en un trader
 
+def f_be_de(param_data):
+    """
 
-    return(df_mad)
+    Parameters
+    ----------
+    param_data: DataFarame con los historicos de las operaciones
 
+    Returns
+    -------
+    Diccionario con las ocurrencias
+    """
 
+    # Calclar el ratio capital_ganadoras/capital_acm *100
+    param_data['ratio_acu'] = 0
+    param_data['ratio_acu'] = [(param_data['profit'][i] / 5000) * 100 if i == 0 else
+                               (param_data['profit'][i] / param_data['capital_acm'][i - 1]) * 100
+                               for i in range(len(param_data['profit']))]
+    # Operaciones ganadoras en el cierre
+    clo_p = param_data[param_data.profit > 0].closetime
+    # Operaciones perdedoras en el cierre
+    close_n = param_data[param_data.profit < 0].closetime
+    # Operaciones ganadoras en el open
+    open_n = param_data[param_data.profit > 0].opentime
+    # Tabla de los historicos son solo las ganadoras
+    ganadoras = param_data[param_data.profit > 0]
+    ganadoras.reset_index(inplace=True, drop=True)
 
+    # Encuentra las veces en que se pudo cumplir el sesgo
+    ocurrencias = [[param_data.iloc[i, :] for i in range(len(param_data)) if
+                    param_data['opentime'][i] < ganadoras['opentime'][j] and
+                    param_data['closetime'][i] > ganadoras['closetime'][j] or
+                    ganadoras['opentime'][j] < param_data['opentime'][i] <
+                    ganadoras['closetime'][j] < param_data['closetime'][i]]
+                   for j in range(len(ganadoras))]
+    # Concatenar la ganadora con las que estaban abiertas
+    concatenadas = [pd.concat([ganadoras.iloc[i, :], pd.concat(ocurrencias[i], axis=1)],
+                              axis=1, sort=False, ignore_index=True).T
+                    for i in range(len(ocurrencias)) if ocurrencias[i] != []]
 
+    # Obtener los simbolos de las operaciones pero con el formato que la funcion require
+    symbol = [[concatenadas[j]['symbol'][i].upper()[:3] + '_' + concatenadas[j]['symbol'][i].upper()[3:]
+               for i in range(len(concatenadas[j]) - 1)] for j in range(len(concatenadas))]
 
+    # Obtener los precios de los simbolos en el precio de cierre del ancla
+    prec_close = [[f_precios((symbol[j][i + 1]), concatenadas[j]['closetime'][0])
+                   for i in range(len(symbol[j]) - 1)] for j in range(len(symbol))]
 
+    # Volvemos a concatenar estos precios en concatenadas
+    conc_precios = [pd.concat([concatenadas[i], pd.concat([pd.DataFrame([0], columns=['priceclose']),
+                                                           pd.DataFrame(prec_close[i], columns=['priceclose'])],
+                                                          sort=False, ignore_index=True)], axis=1, sort=False)
+                    for i in range(len(concatenadas))]
 
-
-
-
-
-
+    # Agregar perdida flotante
+    for i in range(len(conc_precios['profit'])):
+        conc_precios[i]['Perdida flotante'] = (conc_precios[i]['priceclose'] - conc_precios[i]['openprice']) * \
+                                              (conc_precios[i]['profit'] / (conc_precios[i]['closeprice'] -
+                                                                      conc_precios[i]['openprice']))

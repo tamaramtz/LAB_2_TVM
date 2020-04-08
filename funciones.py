@@ -12,7 +12,7 @@ from datetime import timedelta
 # Importar el modulo data del paquete pandas_datareader. La comunidad lo importa con el nombre de web
 pd.core.common.is_list_like = pd.api.types.is_list_like
 import pandas_datareader.data as web
-import datos
+import datos as dt
 from oandapyV20 import API
 import oandapyV20.endpoints.instruments as instruments
 
@@ -135,18 +135,6 @@ def f_columnas_pips(param_data):
     param_data = datos
     """
     param_data['pip_size'] = 0
-    # for i in range(0, len(param_data['type'])):
-    # print(i)
-    # print(param_data.loc[i, 'symbol'])
-    # (closeprice - openprice)*multiplicador
-    # param_data['pip_size'] = np.zeros(len(param_data['type']))
-    # param_data['pip_size'] = (param_data[param_data['type'] == 'sell']['openprice'] - \
-    # param_data[param_data['type'] == 'sell']['closeprice']) * \
-    # f_pip_size(param_data.loc[i, 'symbol'])
-    # param_data['pip_size'][param_data['type'] == 'buy'] = (param_data[param_data['type'] == 'buy']['closeprice'] - \
-    # param_data[param_data['type'] == 'buy']['openprice']) * \
-    # f_pip_size(param_data.loc[i, 'symbol'])
-
     param_data['pips'] = [(param_data.loc[i, 'closeprice'] - param_data.loc[i, 'openprice']) *
                           f_pip_size(param_data.loc[i, 'symbol']) if param_data.loc[i, 'type'] == 'buy'
                           else (param_data.loc[i, 'openprice'] - param_data.loc[i, 'closeprice']) *
@@ -324,7 +312,7 @@ def f_precios(param_instrument, date):
         date = pd.to_datetime("2019-07-06 00:00:00")
     """
     # Inicializar api de OANDA
-    api = API(environment="practice", access_token=datos.OA_Ak)
+    api = API(environment="practice", access_token=dt.OA_Ak)
     # Convertir en string la fecha
     fecha = date.strftime('%Y-%m-%dT%H:%M:%S')
     # Parametros
@@ -333,7 +321,7 @@ def f_precios(param_instrument, date):
     r = instruments.InstrumentsCandles(instrument=param_instrument, params=parameters)
     # Descargarlo de OANDA
     response = api.request(r)
-    # En fomato candles 'open, low, high, close'
+    # En formato candles 'open, low, high, close'
     prices = response.get("candles")
     # Regresar el precio de apertura
     return float(prices[0]['mid']['o'])
@@ -470,8 +458,66 @@ def f_be_de(param_data):
                                                           sort=False, ignore_index=True)], axis=1, sort=False)
                     for i in range(len(concatenadas))]
 
-    # Agregar perdida flotante
-    for i in range(len(conc_precios['profit'])):
-        conc_precios[i]['Perdida flotante'] = (conc_precios[i]['priceclose'] - conc_precios[i]['openprice']) * \
-                                              (conc_precios[i]['profit'] / (conc_precios[i]['closeprice'] -
-                                                                      conc_precios[i]['openprice']))
+    ocur = []
+    k = 0
+    # Se calcula el profit de cada operacion
+    for i in range(len(conc_precios)):
+        conc_precios[i]['Perdida flotate'] = (conc_precios[i]['priceclose'] - conc_precios[i]['openprice']) * \
+                                             (conc_precios[i]['profit'] /
+                                              (conc_precios[i]['closeprice'] - conc_precios[i]['openprice']))
+
+    # Crear los diccionarios
+    profits, index = [], []
+    for j in range(len(prec_close)):
+        for i in range(len(prec_close[j])):
+            if prec_close[j][i] < concatenadas[j]['openprice'][i + 1] and concatenadas[j]['type'][i + 1] == 'buy' \
+                    or prec_close[j][i] > concatenadas[j]['openprice'][i + 1] \
+                    and concatenadas[j]['type'][i + 1] == 'sell':
+                profits.append((conc_precios[j]['Perdida flotate'][i + 1]))
+                index.append(i + 1)
+
+        if profits:
+            k += 1
+            ind = profits.index(min(profits))
+            x = round((conc_precios[j]['priceclose'][index[ind]] -
+                       concatenadas[j]['openprice'][index[ind]]) *
+                      ((concatenadas[j]['profit'][index[ind]]) /
+                       (concatenadas[j]['closeprice'][index[ind]] -
+                        concatenadas[j]['openprice'][index[ind]])), 2)
+            ocur.append({'ocurrencia %d' % k:
+                             {'timestamp': concatenadas[j]['closetime'][0],
+                              'operaciones':
+                                  {'ganadora':
+                                       {'instrumento': concatenadas[j]['symbol'][0],
+                                        'sentido': concatenadas[j]['type'][0],
+                                        'volumen': concatenadas[j]['size'][0],
+                                        'capital_ganadora': concatenadas[j]['profit'][0],
+                                        'capital_acm': concatenadas[j]['capital_acm'][0]},
+                                   'perdedora':
+                                       {'instrumento': concatenadas[j]['symbol'][index[ind]],
+                                        'sentido': concatenadas[j]['type'][index[ind]],
+                                        'volumen': concatenadas[j]['size'][index[ind]],
+                                        'profit': concatenadas[j]['profit'][index[ind]],
+                                        'capital_perdedora': x}},
+
+                              'ratio_cp_capital_acm': round(abs(x / concatenadas[j]['capital_acm'][0]) * 100, 2),
+                              'ratio_cg_capital_acm': round(abs(concatenadas[j]['profit'][0] /
+                                                                concatenadas[j]['capital_acm'][0]) * 100, 2),
+                              'ratio_cp_cg': round(abs(x / concatenadas[j]['profit'][0]), 2)}})
+
+    # Creamos DF para ver las caracteristicas del sesgo
+    df_ocur = pd.DataFrame(columns=['ocurrencias', 'status_quo', 'aversion_perdida', 'sensibilidad_decreciente'])
+    res = pd.concat([pd.DataFrame([ocur[i - 1]['ocurrencia %d' % i]['ratio_cp_capital_acm'],
+                                   ocur[i - 1]['ocurrencia %d' % i]['ratio_cg_capital_acm'],
+                                   ocur[i - 1]['ocurrencia %d' % i]['ratio_cp_cg'],
+                                   ocur[i - 1]['ocurrencia %d' % i]['operaciones']['ganadora']['capital_acm']])
+                     for i in range(1, len(ocur) + 1)], axis=1).T
+    b = pd.concat([res.iloc[0, :], res.iloc[len(res) - 1, :]], axis=1).T
+    df_ocur['ocurrencias'] = [len(res)]
+    df_ocur['status_quo'] = [len([1 for i in range(len(res)) if res.iloc[i, 0] < res.iloc[i, 1]]) / len(res)]
+    df_ocur['aversion_perdida'] = [len([1 for i in range(len(res)) if res.iloc[i, 2] > 1.5]) / len(res)]
+    if b.iloc[0, 3] < b.iloc[1, 3] and b.iloc[1, 2] > 1.5 and\
+            b.iloc[0, 0] < b.iloc[1, 0] or b.iloc[0, 1] < b.iloc[1, 1]:
+        df_ocur['sensibilidad_decreciente'] = 'Sí'
+    else:
+        df_ocur['sensibilidad_decreciente'] = 'No'

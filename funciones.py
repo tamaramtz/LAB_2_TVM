@@ -205,19 +205,19 @@ def f_estadisticas_ba(param_data):
     symbols = np.unique(param_data.symbol)
 
     # Creamos DataFrame
-    df_r = pd.DataFrame(columns=['rank'])
-    df_r.index.name = "symbol"
+    df_2_ranking = pd.DataFrame(columns=['rank'])
+    df_2_ranking.index.name = "symbol"
 
     # Se dividen las ganadoras entre la cantidad de operaciones
     rank = [len(param_data[param_data.profit > 0][param_data.symbol == i]) / len(param_data[param_data.symbol == i])
             for i in symbols]
     # Se mete dentro del DataFrame
-    df_r['rank'] = rank
-    df_r['symbol'] = symbols
+    df_2_ranking['rank'] = rank
+    df_2_ranking['symbol'] = symbols
     # Ordenamos los valores de forma descendente
-    df_r = df_r.sort_values(by='rank', ascending=False)
+    df_2_ranking = df_2_ranking.sort_values(by='rank', ascending=False)
     # Se regresa en forma de diccionario
-    return {'df_1_tabla': df_ba, 'df_2_ranking': df_r}
+    return {'df_1_tabla': df_ba, 'df_2_ranking': df_2_ranking}
 
 
 # -- -------------------------------------------------------------- FUNCION: Capital acumulado -- #
@@ -521,3 +521,5 @@ def f_be_de(param_data):
         df_ocur['sensibilidad_decreciente'] = 'Sí'
     else:
         df_ocur['sensibilidad_decreciente'] = 'No'
+
+    return {'Ocurrencias': ocur, 'Caracteristicas': df_ocur}

@@ -499,7 +499,7 @@ def f_be_de(param_data):
                     and close[i] > ganadoras['closetime'][j] or
                     ganadoras['opentime'][j] < open_price[i] < ganadoras['closetime'][j] < close[i]]
                    for j in range(len(ganadoras))]
-    # Concatenar la ganadora con las que estaban abiertas
+    # Concatenar la ganadora con las que estaban abiertas y se deja la primera a la ganadora que es ancla
     concatenadas = [pd.concat([ganadoras.iloc[i, :], pd.concat(ocurrencias[i], axis=1)],
                               axis=1, sort=False, ignore_index=True).T
                     for i in range(len(ocurrencias)) if ocurrencias[i]]
@@ -524,7 +524,7 @@ def f_be_de(param_data):
         conc_precios[i]['Perdida flotate'] = (conc_precios[i]['priceclose'] - conc_precios[i]['openprice']) * \
                                              (conc_precios[i]['profit'] /
                                               (conc_precios[i]['closeprice'] - conc_precios[i]['openprice']))
-    # Crear los diccionarios
+    # Crear los diccionarios verficiando si la perdidas flotantes si fueron perdidas
     profits = []
     index = []
     for j in range(len(prec_close)):

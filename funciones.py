@@ -524,7 +524,7 @@ def f_be_de(param_data):
         conc_precios[i]['Perdida flotate'] = (conc_precios[i]['priceclose'] - conc_precios[i]['openprice']) * \
                                              (conc_precios[i]['profit'] /
                                               (conc_precios[i]['closeprice'] - conc_precios[i]['openprice']))
-    # Crear los diccionarios verficiando si la perdidas flotantes si fueron perdidas
+    # Crear los diccionarios verficiando si la perdidas flotantes si fueron perdidas dependiedno de su tipo
     profits = []
     index = []
     for j in range(len(prec_close)):
@@ -534,6 +534,7 @@ def f_be_de(param_data):
                     and concatenadas[j]['type'][i + 1] == 'sell':
                 profits.append((conc_precios[j]['Perdida flotate'][i + 1]))
                 index.append(i + 1)
+        # Si sí tiene una pedida entonces si es parte de la ocurrencia
         if profits:
             bb += 1
             ind = profits.index(min(profits))

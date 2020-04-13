@@ -480,7 +480,7 @@ def f_be_de(param_data):
 
     Returns
     -------
-    Diccionario con las ocurrencias
+    {ocur, df_ocur}: Diccionario con las ocurrencias y tabla
     """
     # Operaciones en el cierre
     close = param_data.closetime

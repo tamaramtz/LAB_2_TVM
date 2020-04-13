@@ -534,7 +534,7 @@ def f_be_de(param_data):
                     and concatenadas[j]['type'][i + 1] == 'sell':
                 profits.append((conc_precios[j]['Perdida flotate'][i + 1]))
                 index.append(i + 1)
-        # Si sí tiene una pedida entonces si es parte de la ocurrencia
+        # Si sí tiene una pedida entonces si es parte de la ocurrencia, solo se pone la mayor perdida
         if profits:
             bb += 1
             ind = profits.index(min(profits))
